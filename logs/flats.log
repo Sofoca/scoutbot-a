@@ -78,3 +78,11 @@ rooms: 2.0
 property attributes: bad mit wanne, bad mit fenster
 hash: d4245b62406e1528ec98544359dafbe2d05cd8a9c31e2186820c0eed2b43979f
 
+2026-04-28 06:50:18,689 [INFO] flats: Application sent:
+6-Zimmer-Wohnung in Mitte
+zip code: 10178
+flat size: 125.84
+rooms: 6.0
+property attributes: bad mit wanne, aufzug, barrierearm
+hash: 5dbdbc2eed97fabe412a161406b48f1c1c57c8a4d7138f7985dcdddb8ce8b828
+
