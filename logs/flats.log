@@ -86,3 +86,11 @@ rooms: 6.0
 property attributes: bad mit wanne, aufzug, barrierearm
 hash: 5dbdbc2eed97fabe412a161406b48f1c1c57c8a4d7138f7985dcdddb8ce8b828
 
+2026-05-06 10:47:59,033 [INFO] flats: Application sent:
+2-Zimmer-Wohnung in Mitte
+zip code: 10119
+flat size: 83.8
+rooms: 2.0
+property attributes: bad mit wanne
+hash: 5ab56b82c7af4dd4f0898274b5d12acc02e7cab82e08c3d3e54c9a2118cf5a87
+
