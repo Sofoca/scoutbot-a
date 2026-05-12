@@ -102,3 +102,11 @@ rooms: 2.0
 property attributes: bad mit dusche, aufzug, rolladen, barrierearm, balkon
 hash: 9643827cc68c9eebe37fafc79fdca3ee0abfd4d7bcda6485c307cb3930d85296
 
+2026-05-12 05:49:53,042 [INFO] flats: Application sent:
+Perfekt für Paare oder kleine Familien: Lichtdurchflutete 3-Zimmer-Wohnung in Mitte
+zip code: 10179
+flat size: 80.59
+rooms: 3.0
+property attributes: bad mit dusche, bad mit fenster, aufzug, neubau, offene küche
+hash: b8a74bd1e775e91448b4a46822e8577df4048fcbabafeb4e63f37a66fa03e2c4
+
