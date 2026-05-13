@@ -110,3 +110,11 @@ rooms: 3.0
 property attributes: bad mit dusche, bad mit fenster, aufzug, neubau, offene küche
 hash: b8a74bd1e775e91448b4a46822e8577df4048fcbabafeb4e63f37a66fa03e2c4
 
+2026-05-13 09:47:57,033 [INFO] flats: Application sent:
+Modern möbliertes 2‑Zimmer‑Apartment in zentraler Lage
+zip code: 10179
+flat size: 43.46
+rooms: 2.0
+property attributes: bad mit dusche, aufzug, neubau, einbauküche
+hash: 618c86a23e72969a5278e512dc7b524a8962307680ccaf29bcfd76c07cf27fb7
+
