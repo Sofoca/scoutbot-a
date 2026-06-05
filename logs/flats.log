@@ -126,3 +126,11 @@ rooms: 3.0
 property attributes: bad mit wanne, aufzug, balkon, abstellraum
 hash: 3e67ed1f39650c1819d6192ead1e948a370314d0720cb31753d0abc359987ac0
 
+2026-06-05 14:50:24,086 [INFO] flats: Application sent:
+3-Zimmer-Wohnung in Charlottenburg
+zip code: 10587
+flat size: 66.26
+rooms: 3.0
+property attributes: bad mit wanne, aufzug, balkon
+hash: 0b0231e8b22291c0aeb34e9e85a93b6458d413b6ba87089590be3eb1f3d27b93
+
