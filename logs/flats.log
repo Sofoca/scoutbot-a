@@ -134,3 +134,11 @@ rooms: 3.0
 property attributes: bad mit wanne, aufzug, balkon
 hash: 0b0231e8b22291c0aeb34e9e85a93b6458d413b6ba87089590be3eb1f3d27b93
 
+2026-06-09 09:50:21,203 [INFO] flats: Application sent:
+2-Zimmer-Wohnung in Mitte mit Balkon und Blick ins Grüne
+zip code: 10178
+flat size: 62.3
+rooms: 2.0
+property attributes: bad mit dusche, aufzug, barrierearm
+hash: fee7a9012705d1c4ae86a5517d6de4be8cb0c1017e06b2181fd836c6faff584f
+
