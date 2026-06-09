@@ -166,3 +166,11 @@ rooms: 1.0
 property attributes: bad mit dusche, bad mit fenster, aufzug, offene küche, rolladen
 hash: e96abadeac42e19fff431cc2685ef85ffaa8d83083d57a7174ae993cccb629e4
 
+2026-06-09 12:50:16,147 [INFO] flats: Application sent:
+3-Zimmer-Wohnung mit WBS 160-220
+zip code: 10179
+flat size: 57.31
+rooms: 3.0
+property attributes: bad mit wanne, balkon
+hash: 77b4dba63bedb2177a955cd1ff303cfb67aafd4252fb96047e26110791f89e3e
+
