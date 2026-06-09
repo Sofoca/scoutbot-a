@@ -142,3 +142,27 @@ rooms: 2.0
 property attributes: bad mit dusche, aufzug, barrierearm
 hash: fee7a9012705d1c4ae86a5517d6de4be8cb0c1017e06b2181fd836c6faff584f
 
+2026-06-09 11:49:56,429 [INFO] flats: Application sent:
+Mitte Mitte Mitte - mit WBS 140
+zip code: 10115
+flat size: 74.37
+rooms: 3.0
+property attributes: bad mit wanne
+hash: 54d54b58f57809d4fa41c82cb0a62af9d70b8a340061641fa01f7eeb74d60935
+
+2026-06-09 11:50:04,962 [INFO] flats: Application sent:
+2-Zimmer-Wohnung in Friedrichshain
+zip code: 10245
+flat size: 72.42
+rooms: 2.0
+property attributes: bad mit dusche, bad mit fenster
+hash: 67c9317b0407229efdf255f9adbc13d6f5d8cfac12067b512a3f9da5a5532af7
+
+2026-06-09 11:50:20,374 [INFO] flats: Application sent:
+Großzügige 1-Zimmerwohnung in Friedrichshain
+zip code: 10243
+flat size: 43.01
+rooms: 1.0
+property attributes: bad mit dusche, bad mit fenster, aufzug, offene küche, rolladen
+hash: e96abadeac42e19fff431cc2685ef85ffaa8d83083d57a7174ae993cccb629e4
+
