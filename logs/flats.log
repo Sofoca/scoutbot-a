@@ -206,3 +206,11 @@ rooms: 2.0
 property attributes: bad mit dusche, aufzug, barrierearm, balkon
 hash: 8aa98f80c5a1acd7dc8e6cc2325db7a4e49f81978ba6339c365d7c6a631a80b0
 
+2026-06-16 09:50:02,870 [INFO] flats: Application sent:
+Zentral Wohnen auf 7 Zimmern mit Blick auf die Spree
+zip code: 10117
+flat size: 141.19
+rooms: 7.0
+property attributes: bad mit wanne, aufzug, balkon
+hash: 3120ac37d188ca2218c6c164b79b2cf91bad0669625a904cf5d7521e7ffafd75
+
