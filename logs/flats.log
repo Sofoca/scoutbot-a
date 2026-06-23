@@ -214,3 +214,11 @@ rooms: 7.0
 property attributes: bad mit wanne, aufzug, balkon
 hash: 3120ac37d188ca2218c6c164b79b2cf91bad0669625a904cf5d7521e7ffafd75
 
+2026-06-23 09:20:28,680 [INFO] flats: Application sent:
+2-Zimmer-Wohnung in Friedrichshain
+zip code: 10247
+flat size: 57.96
+rooms: 2.0
+property attributes: bad mit wanne, aufzug, offene küche, rolladen, abstellraum
+hash: 75c6ad39e328f1fbbeb553662459c9622bd8b03be5c6ebb07632397411eb9fab
+
