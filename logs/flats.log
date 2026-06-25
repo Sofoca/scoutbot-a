@@ -230,3 +230,11 @@ rooms: 2.0
 property attributes: bad mit dusche, aufzug, neubau, einbauküche, offene küche, abstellraum
 hash: dcccbc686a4fc975c312358a4e88cf9df0b6599ff7bdcdbc8d5e1216853b24ce
 
+2026-06-25 15:50:32,298 [INFO] flats: Application sent:
+Möblierte 2-Zimmer-Wohnung in Mitte
+zip code: 10179
+flat size: 43.82
+rooms: 2.0
+property attributes: bad mit dusche, aufzug, neubau, einbauküche, offene küche, abstellraum
+hash: f75029af83eaeccad669f1255f5ffe5a1b710b265cae8249165d08dcdd64aad3
+
