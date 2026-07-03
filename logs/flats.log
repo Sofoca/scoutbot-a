@@ -246,3 +246,11 @@ rooms: 4.0
 property attributes: bad mit wanne, aufzug, balkon
 hash: 7d840f3d0b67ecdc3f226baa00f6ae61edbec8561d198d0986488adc8e9f2b31
 
+2026-07-03 08:47:41,520 [INFO] flats: Application sent:
+4-Zimmer-Wohnung in Friedrichshain
+zip code: 10249
+flat size: 103.86
+rooms: 4.0
+property attributes: bad mit wanne, bad mit fenster, aufzug, balkon, abstellraum
+hash: 824624148ec8f34d4a607a101f471c3d8e7a343c6ec84837651967ec4bb10769
+
