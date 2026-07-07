@@ -254,3 +254,11 @@ rooms: 4.0
 property attributes: bad mit wanne, bad mit fenster, aufzug, balkon, abstellraum
 hash: 824624148ec8f34d4a607a101f471c3d8e7a343c6ec84837651967ec4bb10769
 
+2026-07-07 09:47:50,934 [INFO] flats: Application sent:
+5-Zimmer-Wohnung in Mitte mit Balkon
+zip code: 10115
+flat size: 135.94
+rooms: 5.0
+property attributes: bad mit wanne, balkon
+hash: ebd1a6507298abc9db964daa530d64349c8bbe549b69027b6536d957b7d1e532
+
