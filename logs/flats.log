@@ -262,3 +262,11 @@ rooms: 5.0
 property attributes: bad mit wanne, balkon
 hash: ebd1a6507298abc9db964daa530d64349c8bbe549b69027b6536d957b7d1e532
 
+2026-07-08 12:59:12,089 [INFO] flats: Application sent:
+4-Zimmer-Wohnung in Mitte - Nikolaiviertel
+zip code: 10178
+flat size: 103.39
+rooms: 4.0
+property attributes: bad mit wanne
+hash: bb76717439d5cfc26dd7af72b387f9fab002f21780fd4a4adbe31399ae3a4bdb
+
