@@ -86,6 +86,9 @@ def test_matches_criteria(user, mocked_attribute, expected_return):
     (mock_attributes[0], mock_detail_attributes[0], False),
     (mock_attributes[1], mock_detail_attributes[1], False),
     (mock_attributes[2], mock_detail_attributes[2], True),
+    # Missing/unparseable base_rent from detail scrape must not crash
+    (mock_attributes[2], {"base_rent": "", "detail_url": mock_attributes[2]["detail_url"]}, False),
+    (mock_attributes[2], {"base_rent": None, "detail_url": mock_attributes[2]["detail_url"]}, False),
 ])
 def test_within_range(user, mocked_attribute, mocked_detail_attribute, expected_return):
     flat = Flat(attributes=mocked_attribute)

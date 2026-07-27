@@ -34,6 +34,9 @@ class Flat:
         return True
 
     def within_range(self, user):
+        # base_rent may be None when detail scrape/parse fails
+        if self.base_rent is None or user.net_income is None:
+            return False
         if not (0.15 * user.net_income <= self.base_rent <= 0.30 * user.net_income):
             return False
         return True
@@ -52,6 +55,10 @@ class Flat:
 
     @staticmethod
     def _parse_currency(value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
         try:
             return float(value.replace("€", "").replace("EUR", "").replace(".", "").replace(",", ".").strip())
         except (ValueError, AttributeError):
@@ -59,6 +66,10 @@ class Flat:
 
     @staticmethod
     def _parse_sqm(value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
         try:
             return float(value.replace("m²", "").replace(",", ".").strip())
         except (ValueError, AttributeError):
