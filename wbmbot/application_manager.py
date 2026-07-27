@@ -5,6 +5,7 @@ from pathlib import Path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 logger_app = logging.getLogger("app")
 logger_flats = logging.getLogger("flats")
@@ -48,7 +49,21 @@ class ApplicationManager:
         checkbox.click()
         time.sleep(0.5)
         submit_btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@class="btn btn-primary" and @type="submit"]')))
-        submit_btn.click()
+        # Form POST starts navigation; confirmation page often hangs under headless.
+        # Allow longer load, then treat timeout as success (request usually already sent).
+        self.driver.set_page_load_timeout(90)
+        try:
+            submit_btn.click()
+        except TimeoutException:
+            logger_app.warning(
+                f"Submit navigation timed out for '{flat.title}'; assuming form posted"
+            )
+            try:
+                self.driver.execute_script("window.stop();")
+            except Exception:
+                pass
+        finally:
+            self.driver.set_page_load_timeout(45)
 
     def _log_application(self, flat):
         logger_flats.info(
