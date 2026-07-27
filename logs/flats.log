@@ -286,3 +286,11 @@ rooms: 2.0
 property attributes: bad mit wanne, bad mit fenster
 hash: 126e171a310caeae5fccd142530aa49b5f76d91c6755754462e1bb7512fd9990
 
+2026-07-27 11:56:31,988 [INFO] flats: Application sent:
+4-Zimmer-Wohnung in Wilmersdorf
+zip code: 10715
+flat size: 109.34
+rooms: 4.0
+property attributes: bad mit dusche, bad mit wanne, bad mit fenster, aufzug, balkon
+hash: 7b8358aed2d51b2bf849d8516dec965623cfe4fd78bf14e03312d7b500776b21
+
