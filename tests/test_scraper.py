@@ -61,6 +61,25 @@ def test_load_start_page(mocker, flat_scraper):
     flat_scraper._scroll_to_footer.assert_called_once()
     assert result == html_string
 
+
+def test_get_with_retry_recovers(mocker, flat_scraper):
+    from selenium.common.exceptions import TimeoutException
+
+    mocker.patch("wbmbot.scraper.time.sleep")
+    flat_scraper.driver.get.side_effect = [TimeoutException("slow"), None]
+    flat_scraper._get_with_retry(flat_scraper.start_url, retries=3)
+    assert flat_scraper.driver.get.call_count == 2
+
+
+def test_get_with_retry_exhausted(mocker, flat_scraper):
+    from selenium.common.exceptions import TimeoutException
+
+    mocker.patch("wbmbot.scraper.time.sleep")
+    flat_scraper.driver.get.side_effect = TimeoutException("slow")
+    with pytest.raises(TimeoutException):
+        flat_scraper._get_with_retry(flat_scraper.start_url, retries=2)
+    assert flat_scraper.driver.get.call_count == 2
+
 @pytest.mark.parametrize("mocked_return, expected_return", [
     (mock_attributes[0], mock_attributes[0]),
     (mock_attributes[1], mock_attributes[1]),

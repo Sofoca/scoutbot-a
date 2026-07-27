@@ -1,12 +1,19 @@
 import logging
+import time
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from urllib3.exceptions import ReadTimeoutError as Urllib3ReadTimeout
 from .flat import Flat
 
 logger = logging.getLogger("app")
+
+# Page load can hang; Selenium client then raises urllib3 ReadTimeoutError unwrapped
+_LOAD_ERRORS = (TimeoutException, WebDriverException, TimeoutError, Urllib3ReadTimeout)
+
 
 class FlatScraper:
     def __init__(self, driver, start_url):
@@ -14,9 +21,8 @@ class FlatScraper:
         self.start_url = start_url
         self.wait = WebDriverWait(self.driver, 10)
 
-    def load_start_page(self):
-        logger.info(f"Connecting to {self.start_url}")
-        self.driver.get(self.start_url)
+    def load_start_page(self, retries=3):
+        self._get_with_retry(self.start_url, retries=retries)
         self._accept_cookies()
         self._scroll_to_footer()
         return self.driver.page_source  # for testing
@@ -37,9 +43,27 @@ class FlatScraper:
 
     def get_details(self, detail_link):
         # Navigate to details page and extract details from detail page
-        self.driver.get(detail_link)
+        self._get_with_retry(detail_link)
         detail_attrs = self._extract_detail_attributes()
         return detail_attrs
+
+    def _get_with_retry(self, url, retries=3):
+        last_err = None
+        for attempt in range(1, retries + 1):
+            try:
+                logger.info(f"Connecting to {url} (attempt {attempt}/{retries})")
+                self.driver.get(url)
+                return
+            except _LOAD_ERRORS as e:
+                last_err = e
+                logger.warning(f"Page load failed (attempt {attempt}/{retries}): {e}")
+                try:
+                    self.driver.execute_script("window.stop();")
+                except Exception:
+                    pass
+                if attempt < retries:
+                    time.sleep(2 * attempt)
+        raise last_err
 
     def _accept_cookies(self):
         if self.driver.find_elements(By.CLASS_NAME, 'cn-buttons'):
