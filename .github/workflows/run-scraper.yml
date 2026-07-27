@@ -70,10 +70,13 @@ jobs:
 
       - name: Commit updated flats.log to log branch
         run: |
+          # Scraper dirties flats.log on main; stash copy before switching
+          cp logs/flats.log /tmp/flats.log.updated
           for i in {1..3}; do
             git fetch origin log && break || sleep 5
           done
-          git switch log
+          git switch -C log origin/log
+          cp /tmp/flats.log.updated logs/flats.log
           git add logs/flats.log
           git commit -m "chore(log): update flats.log" || echo "No changes to commit"
           for i in {1..3}; do
