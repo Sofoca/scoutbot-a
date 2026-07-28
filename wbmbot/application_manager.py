@@ -32,25 +32,41 @@ class ApplicationManager:
         return True
 
     def _dismiss_cookie_banner(self):
+        try:
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '.cn-buttons'))
+            )
+        except TimeoutException:
+            return
         self.driver.execute_script("""
-            var btn = document.querySelector('.cn-accept-cookie, #cn-accept-cookie, .cn-ok');
+            var btn = document.querySelector('.cn-accept-cookie, .cn-decline, .cn-ok');
             if (btn) { btn.click(); }
-            var banner = document.getElementById('cookie-notice')
-                || document.querySelector('.cookie-notice')
-                || document.querySelector('#cn-wrapper')
-                || (document.querySelector('.cn-buttons') && document.querySelector('.cn-buttons').parentElement);
-            if (banner) { banner.remove(); }
+            ['cookie-notice', 'cn-wrapper'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) { el.remove(); }
+            });
+            document.querySelectorAll('.cookie-notice, [class*="cookie-notice"]').forEach(function(el) {
+                el.remove();
+            });
+            var cnButtons = document.querySelector('.cn-buttons');
+            if (cnButtons && cnButtons.parentElement) {
+                cnButtons.parentElement.remove();
+            }
         """)
-        time.sleep(0.5)
+        time.sleep(0.3)
+        logger_app.info("Cookie consent banner dismissed")
+
+    def _js_click(self, element):
+        try:
+            element.click()
+        except Exception:
+            self.driver.execute_script("arguments[0].click();", element)
 
     def _fill_form_and_submit(self, flat):
         # assumes flat's detail page is already loaded in driver
         self._dismiss_cookie_banner()
         scroll_to_form_btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@class="openimmo-detail__contact-box-button btn scrollLink"]')))
-        try:
-            scroll_to_form_btn.click()
-        except Exception:
-            self.driver.execute_script("arguments[0].click();", scroll_to_form_btn)
+        self._js_click(scroll_to_form_btn)
         time.sleep(1.2)
         name_field = self.wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="powermail_field_name"]')))
         name_field.send_keys(self.user.last_name)
@@ -62,17 +78,14 @@ class ApplicationManager:
         email_field.send_keys(self.user.email)
         time.sleep(1.2)
         checkbox = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//label[@for="powermail_field_datenschutzhinweis_1"]')))
-        try:
-            checkbox.click()
-        except Exception:
-            self.driver.execute_script("arguments[0].click();", checkbox)
+        self._js_click(checkbox)
         time.sleep(0.5)
         submit_btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@class="btn btn-primary" and @type="submit"]')))
         # Form POST starts navigation; confirmation page often hangs under headless.
         # Allow longer load, then treat timeout as success (request usually already sent).
         self.driver.set_page_load_timeout(90)
         try:
-            submit_btn.click()
+            self._js_click(submit_btn)
         except TimeoutException:
             logger_app.warning(
                 f"Submit navigation timed out for '{flat.title}'; assuming form posted"

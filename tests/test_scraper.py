@@ -48,7 +48,7 @@ def test_load_start_page(mocker, flat_scraper):
     html_path = Path(__file__).parent / "data" / "flats.html"
     html_string = html_path.read_text(encoding="utf-8")
 
-    mocker.patch.object(flat_scraper, "_accept_cookies")
+    mocker.patch.object(flat_scraper, "_dismiss_cookie_banner")
     mocker.patch.object(flat_scraper, "_scroll_to_footer")
 
     flat_scraper.driver.get.return_value = None  # get() returns nothing
@@ -57,7 +57,7 @@ def test_load_start_page(mocker, flat_scraper):
     result = flat_scraper.load_start_page()
 
     flat_scraper.driver.get.assert_called_once_with(flat_scraper.start_url)
-    flat_scraper._accept_cookies.assert_called_once()
+    flat_scraper._dismiss_cookie_banner.assert_called_once()
     flat_scraper._scroll_to_footer.assert_called_once()
     assert result == html_string
 
@@ -66,6 +66,7 @@ def test_get_with_retry_recovers(mocker, flat_scraper):
     from selenium.common.exceptions import TimeoutException
 
     mocker.patch("wbmbot.scraper.time.sleep")
+    mocker.patch.object(flat_scraper, "_dismiss_cookie_banner")
     flat_scraper.driver.get.side_effect = [TimeoutException("slow"), None]
     flat_scraper._get_with_retry(flat_scraper.start_url, retries=3)
     assert flat_scraper.driver.get.call_count == 2

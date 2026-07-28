@@ -23,7 +23,6 @@ class FlatScraper:
 
     def load_start_page(self, retries=3):
         self._get_with_retry(self.start_url, retries=retries)
-        self._accept_cookies()
         self._scroll_to_footer()
         return self.driver.page_source  # for testing
 
@@ -53,6 +52,7 @@ class FlatScraper:
             try:
                 logger.info(f"Connecting to {url} (attempt {attempt}/{retries})")
                 self.driver.get(url)
+                self._dismiss_cookie_banner()
                 return
             except _LOAD_ERRORS as e:
                 last_err = e
@@ -65,10 +65,30 @@ class FlatScraper:
                     time.sleep(2 * attempt)
         raise last_err
 
-    def _accept_cookies(self):
-        if self.driver.find_elements(By.CLASS_NAME, 'cn-buttons'):
-            logger.info("Accepting cookies...")
-            self.driver.find_element(By.CLASS_NAME, 'cn-decline').click()
+    def _dismiss_cookie_banner(self):
+        try:
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '.cn-buttons'))
+            )
+        except TimeoutException:
+            return
+        self.driver.execute_script("""
+            var btn = document.querySelector('.cn-accept-cookie, .cn-decline, .cn-ok');
+            if (btn) { btn.click(); }
+            ['cookie-notice', 'cn-wrapper'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) { el.remove(); }
+            });
+            document.querySelectorAll('.cookie-notice, [class*="cookie-notice"]').forEach(function(el) {
+                el.remove();
+            });
+            var cnButtons = document.querySelector('.cn-buttons');
+            if (cnButtons && cnButtons.parentElement) {
+                cnButtons.parentElement.remove();
+            }
+        """)
+        time.sleep(0.3)
+        logger.info("Cookie consent banner dismissed")
 
     def _scroll_to_footer(self):
         footer = self.wait.until(EC.visibility_of_element_located((By.TAG_NAME, 'footer')))
