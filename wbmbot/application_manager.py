@@ -31,8 +31,20 @@ class ApplicationManager:
         logger_app.info(f"Application submitted for: {flat.title}")
         return True
 
+    def _dismiss_cookie_banner(self):
+        try:
+            accept_btn = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, '.cn-buttons .cn-accept-cookie'))
+            )
+            accept_btn.click()
+            time.sleep(0.5)
+            logger_app.info("Cookie consent banner dismissed")
+        except TimeoutException:
+            pass
+
     def _fill_form_and_submit(self, flat):
         # assumes flat's detail page is already loaded in driver
+        self._dismiss_cookie_banner()
         scroll_to_form_btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@class="openimmo-detail__contact-box-button btn scrollLink"]')))
         scroll_to_form_btn.click()
         time.sleep(1.2)
