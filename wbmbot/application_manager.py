@@ -33,9 +33,12 @@ class ApplicationManager:
 
     def _dismiss_cookie_banner(self):
         self.driver.execute_script("""
-            var btn = document.querySelector('.cn-accept-cookie, #cn-accept-cookie');
+            var btn = document.querySelector('.cn-accept-cookie, #cn-accept-cookie, .cn-ok');
             if (btn) { btn.click(); }
-            var banner = document.getElementById('cookie-notice');
+            var banner = document.getElementById('cookie-notice')
+                || document.querySelector('.cookie-notice')
+                || document.querySelector('#cn-wrapper')
+                || (document.querySelector('.cn-buttons') && document.querySelector('.cn-buttons').parentElement);
             if (banner) { banner.remove(); }
         """)
         time.sleep(0.5)
@@ -59,7 +62,10 @@ class ApplicationManager:
         email_field.send_keys(self.user.email)
         time.sleep(1.2)
         checkbox = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//label[@for="powermail_field_datenschutzhinweis_1"]')))
-        checkbox.click()
+        try:
+            checkbox.click()
+        except Exception:
+            self.driver.execute_script("arguments[0].click();", checkbox)
         time.sleep(0.5)
         submit_btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@class="btn btn-primary" and @type="submit"]')))
         # Form POST starts navigation; confirmation page often hangs under headless.
