@@ -302,3 +302,11 @@ rooms: 1.0
 property attributes: bad mit dusche, bad mit fenster, aufzug, barrierearm
 hash: 850c0317a05252add7cf9a0dc27beeafc7beb525dc904d4a8d3fbeb53deaf7bd
 
+2026-08-07 13:52:32,278 [INFO] flats: Application sent:
+Möbliertes City-Apartment an der Fischerinsel
+zip code: 10179
+flat size: 43.27
+rooms: 2.0
+property attributes: aufzug, neubau, einbauküche, abstellraum
+hash: df423ec66160cdd4eff5c20e29b1634a9241197faf4e98a6733e4a79b94db47b
+
