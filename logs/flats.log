@@ -310,3 +310,11 @@ rooms: 2.0
 property attributes: aufzug, neubau, einbauküche, abstellraum
 hash: df423ec66160cdd4eff5c20e29b1634a9241197faf4e98a6733e4a79b94db47b
 
+2026-08-10 16:47:28,863 [INFO] flats: Application sent:
+2-Zimmer-Wohnung in Friedrichshain
+zip code: 10249
+flat size: 63.81
+rooms: 2.0
+property attributes: bad mit wanne, aufzug, barrierearm, balkon
+hash: 3f1b046c9ca27571d3036b027c55dce30386aefe68ee185f506b0587fe179e6e
+
