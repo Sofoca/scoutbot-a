@@ -21,4 +21,9 @@ class ConfigLoader:
             logger.error(f"YAML error while parsing user config variable: {e}")
             raise
 
+        if config is None:
+            raise ValueError("USER_CONFIG appears to be empty or invalid YAML")
+        if not isinstance(config, dict):
+            raise ValueError("USER_CONFIG must be a YAML mapping/dictionary")
+
         return config
