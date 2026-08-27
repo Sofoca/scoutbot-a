@@ -350,3 +350,11 @@ rooms: 1.0
 property attributes: bad mit dusche, aufzug, neubau, rolladen
 hash: de4db9dc5ee75cd976c8fdac0192030ccf13e595195c9c1d8f4b5f46a61f9a33
 
+2026-08-27 13:29:12,003 [INFO] flats: Application sent:
+1-Zimmer-Wohnung in Friedrichshain
+zip code: 10249
+flat size: 39.76
+rooms: 1.0
+property attributes: bad mit dusche, aufzug, offene küche, balkon
+hash: e67faba3632d767b089ec67259aa1d6bddb9472cca8516b9deaad7d4ad9c245c
+
