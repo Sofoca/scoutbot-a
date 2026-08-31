@@ -27,6 +27,7 @@ class User:
         self.loc_filter = [loc.lower() for loc in self._parse_list(attributes.get("loc_filter", []), "loc_filter")]
         self.max_rent = self._parse_float(attributes["max_rent"])
         self.min_rooms = self._parse_float(attributes.get("min_rooms", 0.0))
+        self.max_rooms = self._parse_float(attributes.get("max_rooms"))
         self.min_sqm = self._parse_float(attributes.get("min_sqm", 0.0))
         self.net_income = self._parse_float(attributes["net_income"])
 
@@ -43,6 +44,8 @@ class User:
             raise ValueError("max_rent must be a positive number")
         if self.net_income is None or self.net_income <= 0:
             raise ValueError("net_income must be a positive number")
+        if self.max_rooms is not None and self.max_rooms <= 0:
+            raise ValueError("max_rooms must be a positive number when provided")
 
     @staticmethod
     def _parse_wbs(value):

@@ -20,6 +20,8 @@ class Flat:
             return False
         if self.rooms < user.min_rooms:
             return False
+        if user.max_rooms is not None and self.rooms > user.max_rooms:
+            return False
         if self.size < user.min_sqm:
             return False
         if user.wbs != self.wbs:
