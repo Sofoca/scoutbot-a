@@ -374,3 +374,11 @@ rooms: 2.0
 property attributes: bad mit dusche, aufzug, offene küche, rolladen, barrierearm, balkon, abstellraum
 hash: 3bf53982c3cfbdb95ec56a09ea2256e3e3a74838e16f00a3a8087ee299120135
 
+2026-09-02 11:22:40,010 [INFO] flats: Application sent:
+3-Zimmer-Wohnung in Mitte mit Stuck und Dielenboden
+zip code: 10115
+flat size: 91.6
+rooms: 3.0
+property attributes: bad mit dusche, bad mit fenster
+hash: 6d5a68c2d91efee2034f8141aa7b01cd8866aa9fe0c7333efddde3f81261d263
+
