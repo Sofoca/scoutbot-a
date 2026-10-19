@@ -39,7 +39,7 @@ class User:
         if not self.last_name:
             raise ValueError("last_name must not be empty")
         if not self._EMAIL_RE.match(self.email):
-            raise ValueError(f"email is not a valid email address: {self.email!r}")
+            raise ValueError("email is not a valid email address")
         if self.max_rent is None or self.max_rent <= 0:
             raise ValueError("max_rent must be a positive number")
         if self.net_income is None or self.net_income <= 0:
@@ -56,7 +56,7 @@ class User:
             return True
         if raw in User._WBS_FALSE:
             return False
-        raise ValueError(f"wbs must be one of {sorted(User._WBS_TRUE | User._WBS_FALSE)}; got {value!r}")
+        raise ValueError(f"wbs must be one of {sorted(User._WBS_TRUE | User._WBS_FALSE)}")
 
     @staticmethod
     def _parse_float(value):
@@ -75,4 +75,4 @@ class User:
             return [item.strip() for item in value.split(",") if item.strip()]
         if isinstance(value, list):
             return [str(item).strip() for item in value if str(item).strip()]
-        raise ValueError(f"{name} must be a list of strings; got {value!r}")
+        raise ValueError(f"{name} must be a list of strings")

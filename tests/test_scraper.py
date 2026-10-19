@@ -49,7 +49,7 @@ def test_load_start_page(mocker, flat_scraper):
     html_string = html_path.read_text(encoding="utf-8")
 
     mocker.patch.object(flat_scraper, "_dismiss_cookie_banner")
-    mocker.patch.object(flat_scraper, "_scroll_to_footer")
+    mocker.patch.object(flat_scraper.wait, "until")
 
     flat_scraper.driver.get.return_value = None  # get() returns nothing
     flat_scraper.driver.page_source = html_string
@@ -58,7 +58,7 @@ def test_load_start_page(mocker, flat_scraper):
 
     flat_scraper.driver.get.assert_called_once_with(flat_scraper.start_url)
     flat_scraper._dismiss_cookie_banner.assert_called_once()
-    flat_scraper._scroll_to_footer.assert_called_once()
+    flat_scraper.wait.until.assert_called_once()
     assert result == html_string
 
 

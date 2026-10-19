@@ -1,0 +1,33 @@
+name: Bot regression tests
+on:
+  push:
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --python 3.12 --locked
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          install-chromedriver: true
+      - name: Unit and local browser regression tests (no real applications)
+        env:
+          SCOUTBOT_BROWSER_TESTS: '1'
+          CHROME_BINARY: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          export PATH="$(dirname "${{ steps.chrome.outputs.chromedriver-path }}"):$PATH"
+          uv run --python 3.12 pytest -q

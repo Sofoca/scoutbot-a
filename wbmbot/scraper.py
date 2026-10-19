@@ -2,7 +2,6 @@ import logging
 import time
 
 from selenium.webdriver.common.by import By
-from selenium.webdriver import ActionChains
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -23,7 +22,11 @@ class FlatScraper:
 
     def load_start_page(self, retries=3):
         self._get_with_retry(self.start_url, retries=retries)
-        self._scroll_to_footer()
+        self.wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR,
+                '.openimmo-search-list-item, .openimmo-no-offer-avilable__header')),
+            message=f"Listing results or the explicit no-offers notice did not load: {self.start_url}",
+        )
         return self.driver.page_source  # for testing
 
     def get_flats(self):
@@ -90,13 +93,12 @@ class FlatScraper:
         time.sleep(0.3)
         logger.info("Cookie consent banner dismissed")
 
-    def _scroll_to_footer(self):
-        footer = self.wait.until(EC.visibility_of_element_located((By.TAG_NAME, 'footer')))
-        ActionChains(self.driver).scroll_to_element(footer).perform()
-
     def _extract_summary_attributes(self, flat_elem):
         # Extract title, total rent, size, rooms, zip_code, property attributes summary from flat_elem, link to detail page
-        self.wait.until(EC.presence_of_element_located((By.XPATH, './/*[@title="Details"]')))
+        WebDriverWait(flat_elem, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'a[title="Details"]')),
+            message="Listing card is missing its Details link",
+        )
         title = self._find_element_text_safe(flat_elem, By.CLASS_NAME, 'imageTitle')
         total_rent = self._find_element_text_safe(flat_elem, By.CLASS_NAME, 'main-property-rent')
         size = self._find_element_text_safe(flat_elem, By.CLASS_NAME, 'main-property-size')

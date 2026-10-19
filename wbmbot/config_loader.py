@@ -17,9 +17,9 @@ class ConfigLoader:
         logger.info("Loading config from GitHub secret...")
         try:
             config = yaml.safe_load(config_string)
-        except yaml.YAMLError as e:
-            logger.error(f"YAML error while parsing user config variable: {e}")
-            raise
+        except yaml.YAMLError:
+            # Parser exceptions include lines from USER_CONFIG, which is a secret.
+            raise ValueError("USER_CONFIG contains invalid YAML; check its formatting") from None
 
         if config is None:
             raise ValueError("USER_CONFIG appears to be empty or invalid YAML")
