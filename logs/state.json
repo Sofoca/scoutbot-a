@@ -1,0 +1,9 @@
+{
+  "query_failures": 0,
+  "incidents": {
+    "b491cc0a6f150468bda18bc69ebad00c83624387c2af02d7561a097d3dfc8153": "1f968b305d2f422f7d042d914bc1ee710753e58cf42ee9a392027780e0544ffe"
+  },
+  "pending": {
+    "b491cc0a6f150468bda18bc69ebad00c83624387c2af02d7561a097d3dfc8153": true
+  }
+}
