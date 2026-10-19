@@ -1,6 +1,7 @@
 import time
 import logging
 from pathlib import Path
+from urllib.parse import urlsplit
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -130,6 +131,7 @@ class ApplicationManager:
             raise ApplicationError(f"WBM form validation failed before submission: {', '.join(invalid)}")
         if self.state:
             self.state.mark_pending(flat)
+        self._submission_origin = self.driver.execute_script("return location.origin;")
         self.driver.set_page_load_timeout(45)
         try:
             self._js_click(submit_btn)
@@ -139,22 +141,36 @@ class ApplicationManager:
                 self.driver.execute_script("window.stop();")
             except Exception:
                 pass
-        self.wait.until(self._submission_confirmed, message=(
-            "WBM did not show a submission confirmation. Outcome unknown; check the confirmation "
-            "email. Automatic resubmission is paused to avoid duplicates."
-        ))
+        try:
+            self.wait.until(self._submission_confirmed, message=(
+                "WBM did not show a submission confirmation. Outcome unknown."
+            ))
+        except TimeoutException:
+            # Never save the filled page, query string, form values, or browser logs.
+            path = urlsplit(self.driver.current_url).path
+            form_present = bool(self.driver.find_elements(By.CSS_SELECTOR, 'form.powermail_form'))
+            logger_app.warning("Unconfirmed submission: response path=%s, application form present=%s", path, form_present)
+            raise TimeoutException(
+                f"WBM did not show a recognized confirmation. Response page: {path}; "
+                f"application form still present: {form_present}. Outcome unknown."
+            ) from None
 
     def _submission_confirmed(self, driver):
         # Inspect one DOM snapshot: navigation between separate error/success queries
         # can otherwise misclassify an error page that also has a create wrapper.
-        result = driver.execute_script("""
+        result = driver.execute_script(r"""
             const visible = el => el.getClientRects().length > 0 &&
                 getComputedStyle(el).visibility !== 'hidden' && el.textContent.trim();
             if (Array.from(document.querySelectorAll('.powermail_message_error, .powermail-errors-list'))
                 .some(visible)) return 'error';
             if (Array.from(document.querySelectorAll('.powermail_create')).some(visible)) return 'confirmed';
+            const main = document.querySelector('main');
+            const text = main?.innerText.replace(/\s+/g, ' ').trim() || '';
+            if (location.origin === arguments[0] &&
+                location.pathname.replace(/\/$/, '') === '/wohnungen-berlin/angebote/vielen-dank' &&
+                text.includes('Wir haben Ihre Anfrage für das Wohnungsangebot erhalten.')) return 'confirmed';
             return null;
-        """)
+        """, self._submission_origin)
         if result == "error":
             raise ApplicationError("WBM reported a form error; check the application form and its required fields")
         return result == "confirmed"

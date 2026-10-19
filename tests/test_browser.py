@@ -51,6 +51,10 @@ def site():
             self.wfile.write(html.encode())
 
         def do_GET(self):
+            if self.path.startswith('/wohnungen-berlin/angebote/vielen-dank') or self.path == '/unrelated/vielen-dank/':
+                text = 'Still processing' if 'empty=1' in self.path else 'Wir haben Ihre Anfrage für das Wohnungsangebot erhalten.'
+                self.send_html(f'<main><h1>Vielen Dank</h1><p>{text}</p></main>')
+                return
             if self.path == "/listings":
                 self.send_html('<div class="openimmo-no-offer-avilable__header">No offers available</div>')
                 return
@@ -59,7 +63,7 @@ def site():
             control = (f'<{tag} type="button" class="btn extra openimmo-detail__contact-box-button" '
                        'data-target=".tx-powermail" onclick="document.getElementById(\'contact\').style.display=\'block\'">'
                        f'Anfrage absenden</{tag}>')
-            target = "/error" if "error" in self.path else "/unknown" if "unknown" in self.path else "/success"
+            target = self.path if 'redirect' in self.path else "/error" if "error" in self.path else "/unknown" if "unknown" in self.path else "/success"
             self.send_html(control + f'''<div style="height:100px"></div>
                 <form id="contact" class="powermail_form" action="{target}" method="post" style="display:none">
                 <input id="powermail_field_name" name="name" required>
@@ -71,6 +75,14 @@ def site():
 
         def do_POST(self):
             posts.append(parse_qs(self.rfile.read(int(self.headers['Content-Length'])).decode()))
+            if 'redirect' in self.path:
+                destination = '/unrelated/vielen-dank/' if 'wrong' in self.path else '/wohnungen-berlin/angebote/vielen-dank/'
+                if 'empty' in self.path:
+                    destination += '?empty=1'
+                self.send_response(303)
+                self.send_header('Location', destination)
+                self.end_headers()
+                return
             if self.path == "/error":
                 self.send_html('<div class="powermail_message_error">Form rejected</div><div class="powermail_create">Result</div>')
             elif self.path == "/unknown":
@@ -95,7 +107,7 @@ def make_manager(browser, tmp_path, monkeypatch):
     return manager
 
 
-@pytest.mark.parametrize("page", ["current", "legacy"])
+@pytest.mark.parametrize("page", ["current", "legacy", "redirect"])
 def test_current_and_legacy_form_confirm_once(browser, site, tmp_path, monkeypatch, page):
     url, posts = site
     browser.get(f"{url}/{page}")
@@ -131,7 +143,8 @@ def test_old_selector_reproduces_failure(browser, site):
     assert browser.find_element(By.CSS_SELECTOR, '.openimmo-detail__contact-box-button').tag_name == "button"
 
 
-@pytest.mark.parametrize("page, error", [("error", ApplicationError), ("unknown", TimeoutException)])
+@pytest.mark.parametrize("page, error", [("error", ApplicationError), ("unknown", TimeoutException),
+                                        ("redirect-wrong", TimeoutException), ("redirect-empty", TimeoutException)])
 def test_rejection_or_unknown_result_is_not_logged_or_reposted(browser, site, tmp_path, monkeypatch, page, error):
     url, posts = site
     browser.get(f"{url}/{page}")

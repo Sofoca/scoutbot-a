@@ -24,7 +24,10 @@ def flat():
 
 @pytest.fixture
 def manager(tmp_path, state):
-    return ApplicationManager(Mock(), SimpleNamespace(first_name="Test", last_name="Applicant", email="test@example.invalid"),
+    driver = Mock()
+    driver.current_url = 'https://www.wbm.de/example'
+    driver.find_elements.return_value = []
+    return ApplicationManager(driver, SimpleNamespace(first_name="Test", last_name="Applicant", email="test@example.invalid"),
                               tmp_path / "flats.log", state)
 
 
@@ -34,7 +37,7 @@ def test_no_success_record_without_confirmation(manager, flat, mocker):
     manager.driver.find_elements.return_value = []
     manager.wait = WebDriverWait(manager.driver, 0)
     record = mocker.patch.object(manager, "_log_application")
-    with pytest.raises(TimeoutException, match="Submission|submission"):
+    with pytest.raises(TimeoutException, match="confirmation"):
         manager.apply(flat)
     record.assert_not_called()
     assert RunState(manager.state.path).data["pending"][flat.hash]
