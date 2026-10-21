@@ -175,3 +175,49 @@ def test_application_failure_alerts_immediately_and_other_flats_continue(state, 
     assert "opening the contact form" in messages[0]
     assert "https://www.wbm.de/flat-0" in messages[0]
     assert "applied to a flat" in messages[1]
+
+
+def test_unavailable_flat_skipped_without_incident_or_alert(state, tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    mocker.patch.object(main, "User", return_value=SimpleNamespace(first_name="Test", net_income=3000, max_rent=1500, min_rooms=1, max_rooms=None, min_sqm=30, wbs=False, kw_filter=[], loc_filter=[]))
+    mocker.patch.object(main, "ConfigLoader")
+    mocker.patch.object(main.webdriver, "Chrome")
+    flats = [
+        Mock(hash="unavailable-hash", title="Expired Flat", detail_link="https://www.wbm.de/expired",
+             base_rent=None, zip_code="10115", size=60, rooms=2, total_rent=1000, wbs=False,
+             property_attrs=[], available=True, matches_criteria=Mock(return_value=True)),
+        Mock(hash="available-hash", title="Available Flat", detail_link="https://www.wbm.de/available",
+             base_rent=700, zip_code="10115", size=60, rooms=2, total_rent=1000, wbs=False,
+             property_attrs=[], available=True, matches_criteria=Mock(return_value=True),
+             within_range=Mock(return_value=True)),
+    ]
+    flats[0].update_details = lambda d: setattr(flats[0], "available", d.get("available", True))
+    scraper = mocker.patch.object(main, "FlatScraper").return_value
+    scraper.get_flats.return_value = flats
+    scraper.get_details.side_effect = [
+        {"available": False, "base_rent": None, "detail_url": "https://www.wbm.de/expired"},
+        {"available": True, "base_rent": "700 EUR", "detail_url": "https://www.wbm.de/available"},
+    ]
+    manager = mocker.patch.object(main, "ApplicationManager").return_value
+    manager.has_applied.return_value = False
+    manager.apply.return_value = True
+    telegram = mocker.patch.object(main, "send_telegram", return_value=True)
+
+    main.main(state)
+
+    # Only the available flat should be applied to
+    assert manager.apply.call_count == 1
+    assert manager.apply.call_args[0][0] == flats[1]
+    # No incidents created
+    assert not state.data["incidents"]
+    # Only the success notification sent
+    assert telegram.call_count == 1
+    assert "applied to a flat" in telegram.call_args[0][0]
+
+
+def test_unavailable_flat_during_form_prep_skipped_cleanly(manager, flat, mocker):
+    mocker.patch.object(manager, "_dismiss_cookie_banner")
+    mocker.patch.object(manager, "_is_unavailable", return_value=True)
+    assert manager.apply(flat) is False
+    assert not manager.state.data["pending"]
+    assert not manager.state.data["incidents"]

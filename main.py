@@ -10,8 +10,9 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from urllib3.exceptions import ReadTimeoutError as Urllib3ReadTimeout
 
-from wbmbot import User, ConfigLoader, FlatScraper, ApplicationManager
-from wbmbot.application_manager import ApplicationError
+from wbmbot import (
+    User, ConfigLoader, FlatScraper, ApplicationManager, ApplicationError, ListingUnavailableError,
+)
 from wbmbot.run_state import RunState
 from wbmbot.utils import setup_loggers
 
@@ -103,7 +104,14 @@ def main(state):
                 if flat.hash in state.data["pending"] and flat.hash in state.data["incidents"]:
                     logger.warning("Previously reported uncertain submission remains paused: %s", flat.detail_link)
                     continue
-                flat.update_details(scraper.get_details(flat.detail_link))
+                details = scraper.get_details(flat.detail_link)
+                if not details or not details.get("available", True):
+                    logger.info("Flat '%s' is no longer available; skipping: %s", flat.title, flat.detail_link)
+                    continue
+                flat.update_details(details)
+                if not flat.available:
+                    logger.info("Flat '%s' is no longer available; skipping: %s", flat.title, flat.detail_link)
+                    continue
                 if flat.base_rent is None:
                     raise ApplicationError("WBM base rent could not be read; eligibility could not be checked")
                 if not flat.within_range(user):
@@ -121,6 +129,9 @@ def main(state):
                     if flat.property_attrs:
                         message.append(f"🏠 {', '.join(flat.property_attrs)}")
                     send_telegram("\n".join(message))
+            except ListingUnavailableError:
+                logger.info("Flat '%s' is no longer available; skipping: %s", flat.title, flat.detail_link)
+                continue
             except (ApplicationError, *TRANSIENT_ERRORS) as error:
                 logger.exception("Application problem while %s: %s", stage, flat.detail_link)
                 reason = error_detail(error)

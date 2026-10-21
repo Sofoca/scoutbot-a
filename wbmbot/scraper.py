@@ -1,6 +1,8 @@
 import logging
 import time
 
+import re
+from urllib.parse import urljoin
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -12,6 +14,10 @@ logger = logging.getLogger("app")
 
 # Page load can hang; Selenium client then raises urllib3 ReadTimeoutError unwrapped
 _LOAD_ERRORS = (TimeoutException, WebDriverException, TimeoutError, Urllib3ReadTimeout)
+
+
+class ListingUnavailableError(Exception):
+    """Raised when a flat listing is no longer available on WBM."""
 
 
 class FlatScraper:
@@ -43,10 +49,52 @@ class FlatScraper:
 
         return flats
 
+    def is_listing_available(self):
+        try:
+            current_url = getattr(self.driver, "current_url", "") or ""
+            if any(term in current_url.lower() for term in ("nicht-mehr-verfuegbar", "not-available")):
+                return False
+
+            title = (getattr(self.driver, "title", "") or "").lower()
+            if any(term in title for term in ("nicht mehr verfügbar", "not available")) or title.startswith("404"):
+                return False
+
+            headers = self.driver.find_elements(
+                By.CSS_SELECTOR, "h1, h2, .m-text__header, .openimmo-no-offer-avilable__header"
+            )
+            for h in headers:
+                try:
+                    h_text = h.text.lower()
+                    if "nicht mehr verfügbar" in h_text or "not available" in h_text:
+                        return False
+                except Exception:
+                    pass
+
+            detail_containers = self.driver.find_elements(
+                By.CSS_SELECTOR,
+                ".openimmo-detail, .openimmo-detail__rental-costs-container, .openimmo-detail__contact-box-button"
+            )
+            if not detail_containers:
+                body_text = self._find_element_text_safe(self.driver, By.TAG_NAME, "body").lower()
+                if "nicht mehr verfügbar" in body_text or "angebot nicht mehr verfügbar" in body_text:
+                    return False
+        except Exception as e:
+            logger.warning(f"Error checking listing availability: {e}")
+        return True
+
     def get_details(self, detail_link):
         # Navigate to details page and extract details from detail page
         self._get_with_retry(detail_link)
+        if not self.is_listing_available():
+            logger.info(f"Listing is no longer available: {detail_link}")
+            return {
+                "available": False,
+                "base_rent": None,
+                "detail_url": detail_link,
+            }
         detail_attrs = self._extract_detail_attributes()
+        detail_attrs["available"] = True
+        detail_attrs["detail_url"] = detail_link
         return detail_attrs
 
     def _get_with_retry(self, url, retries=3):
@@ -107,6 +155,8 @@ class FlatScraper:
         property_attrs_elems = flat_elem.find_elements(By.XPATH, './/ul[@class="check-property-list"]/li')
         property_attrs = [elem.text for elem in property_attrs_elems] # empty list if none found
         detail_link = self._find_element_attr_safe(flat_elem, By.XPATH, './/*[@title="Details"]', attr='href')
+        if detail_link and detail_link.startswith("/"):
+            detail_link = urljoin("https://www.wbm.de", detail_link)
 
         return {
             "title": title,
@@ -120,10 +170,40 @@ class FlatScraper:
 
     def _extract_detail_attributes(self):
         # Extract the detail page specific fields like base_rent and others
-        base_rent = self._find_element_text_safe(self.driver, By.CLASS_NAME, 'openimmo-detail__rental-costs-list-item-value')
+        base_rent = ""
+        cost_items = self.driver.find_elements(By.CSS_SELECTOR, '.openimmo-detail__rental-costs-list-item')
+        for item in cost_items:
+            title_text = self._find_element_text_safe(
+                item, By.CSS_SELECTOR, '.openimmo-detail__rental-costs-list-item-title'
+            ).lower()
+            if any(k in title_text for k in ("kalt", "grundmiete")):
+                val = self._find_element_text_safe(
+                    item, By.CSS_SELECTOR, '.openimmo-detail__rental-costs-list-item-value'
+                )
+                if val:
+                    base_rent = val
+                    break
+
+        if not base_rent:
+            base_rent = self._find_element_text_safe(
+                self.driver, By.CLASS_NAME, 'openimmo-detail__rental-costs-list-item-value'
+            )
+
+        if not base_rent:
+            try:
+                page_source = getattr(self.driver, "page_source", "") or ""
+                match = re.search(
+                    r'(?:nettokaltmiete|kaltmiete)\s*[:]?\s*([0-9.,\s]+)\s*(?:€|eur)',
+                    page_source,
+                    re.IGNORECASE,
+                )
+                if match:
+                    base_rent = match.group(1).strip()
+            except Exception:
+                pass
+
         return {
             "base_rent": base_rent,
-            # maybe add floor here
         }
 
     @staticmethod

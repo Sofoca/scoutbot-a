@@ -104,4 +104,72 @@ def test_get_flats(mocker, flat_scraper, mock_attributes_fixture):
     for expected, returned in zip(expected_flats, returned_flats):
         assert expected.__dict__ == returned.__dict__
 
-# add test for no_flats.html
+
+def test_is_listing_available(flat_scraper, mocker):
+    # Case 1: Redirected URL
+    flat_scraper.driver.current_url = "https://www.wbm.de/wohnungen-berlin/angebote/nicht-mehr-verfuegbar/"
+    flat_scraper.driver.title = "Nicht mehr verfügbar"
+    assert flat_scraper.is_listing_available() is False
+
+    # Case 2: 404 title
+    flat_scraper.driver.current_url = "https://www.wbm.de/wohnungen-berlin/angebote/details/foo"
+    flat_scraper.driver.title = "404 - Wohnungsbaugesellschaft Berlin-Mitte mbH"
+    assert flat_scraper.is_listing_available() is False
+
+    # Case 3: Heading indicator
+    flat_scraper.driver.title = "Wohnungsangebote"
+    heading = mocker.Mock()
+    heading.text = "Angebot nicht mehr verfügbar"
+    flat_scraper.driver.find_elements.side_effect = lambda by, sel: [heading] if "h1" in sel else []
+    assert flat_scraper.is_listing_available() is False
+
+    # Case 4: Valid listing
+    flat_scraper.driver.title = "2-Zimmer-Wohnung in Mitte"
+    flat_scraper.driver.current_url = "https://www.wbm.de/wohnungen-berlin/angebote/details/2-zimmer"
+    detail_container = mocker.Mock()
+    flat_scraper.driver.find_elements.side_effect = lambda by, sel: [detail_container] if "openimmo-detail" in sel else []
+    assert flat_scraper.is_listing_available() is True
+
+
+def test_get_details_handles_unavailable(flat_scraper, mocker):
+    mocker.patch.object(flat_scraper, "_get_with_retry")
+    mocker.patch.object(flat_scraper, "is_listing_available", return_value=False)
+    details = flat_scraper.get_details("https://www.wbm.de/expired-flat")
+    assert details == {
+        "available": False,
+        "base_rent": None,
+        "detail_url": "https://www.wbm.de/expired-flat",
+    }
+
+
+def test_get_details_handles_available(flat_scraper, mocker):
+    mocker.patch.object(flat_scraper, "_get_with_retry")
+    mocker.patch.object(flat_scraper, "is_listing_available", return_value=True)
+    mocker.patch.object(flat_scraper, "_extract_detail_attributes", return_value={"base_rent": "800 EUR"})
+    details = flat_scraper.get_details("https://www.wbm.de/valid-flat")
+    assert details == {
+        "available": True,
+        "base_rent": "800 EUR",
+        "detail_url": "https://www.wbm.de/valid-flat",
+    }
+
+
+def test_extract_detail_attributes_identifies_kaltmiete(flat_scraper, mocker):
+    item1 = mocker.Mock()
+    item2 = mocker.Mock()
+    item1_title = mocker.Mock(text="Warmmiete")
+    item1_val = mocker.Mock(text="1.200,00 EUR")
+    item2_title = mocker.Mock(text="Nettokaltmiete")
+    item2_val = mocker.Mock(text="850,00 EUR")
+
+    def find_in_item(item, by, sel):
+        if item is item1:
+            return item1_title.text if "title" in sel else item1_val.text
+        return item2_title.text if "title" in sel else item2_val.text
+
+    mocker.patch.object(flat_scraper, "_find_element_text_safe", side_effect=find_in_item)
+    flat_scraper.driver.find_elements.return_value = [item1, item2]
+
+    details = flat_scraper._extract_detail_attributes()
+    assert details["base_rent"] == "850,00 EUR"
+

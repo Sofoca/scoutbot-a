@@ -12,6 +12,7 @@ class Flat:
         self.zip_code = self._extract_zipcode(attributes.get("zip_code", ""))
         self.property_attrs = [attr.lower() for attr in attributes.get("property_attrs", [])]
         self.wbs = any("wbs" in attr for attr in self.property_attrs)
+        self.available = attributes.get("available", True)
         # Compute hash for deduplication
         self.hash = self._compute_hash()
 
@@ -45,6 +46,10 @@ class Flat:
 
     def update_details(self, detail_attrs: dict):
         # Update or add attributes only available from detail page
+        if not detail_attrs:
+            return
+        if "available" in detail_attrs:
+            self.available = bool(detail_attrs["available"])
         if "base_rent" in detail_attrs:
             self.base_rent = self._parse_currency(detail_attrs.get("base_rent", ""))
         if "detail_url" in detail_attrs:
@@ -62,7 +67,16 @@ class Flat:
         if isinstance(value, (int, float)):
             return float(value)
         try:
-            return float(value.replace("€", "").replace("EUR", "").replace(".", "").replace(",", ".").strip())
+            cleaned = re.sub(r"\s+", "", str(value))
+            cleaned = re.sub(r"(?i)[€]|eur", "", cleaned)
+            if "," in cleaned and "." in cleaned:
+                if cleaned.rfind(",") > cleaned.rfind("."):
+                    cleaned = cleaned.replace(".", "").replace(",", ".")
+                else:
+                    cleaned = cleaned.replace(",", "")
+            elif "," in cleaned:
+                cleaned = cleaned.replace(",", ".")
+            return float(cleaned)
         except (ValueError, AttributeError):
             return None
 
@@ -73,7 +87,16 @@ class Flat:
         if isinstance(value, (int, float)):
             return float(value)
         try:
-            return float(value.replace("m²", "").replace(",", ".").strip())
+            cleaned = re.sub(r"\s+", "", str(value))
+            cleaned = re.sub(r"(?i)m[²2]|sqm", "", cleaned)
+            if "," in cleaned and "." in cleaned:
+                if cleaned.rfind(",") > cleaned.rfind("."):
+                    cleaned = cleaned.replace(".", "").replace(",", ".")
+                else:
+                    cleaned = cleaned.replace(",", "")
+            elif "," in cleaned:
+                cleaned = cleaned.replace(",", ".")
+            return float(cleaned)
         except (ValueError, AttributeError):
             return None
 

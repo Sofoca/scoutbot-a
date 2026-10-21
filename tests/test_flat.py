@@ -95,3 +95,28 @@ def test_within_range(user, mocked_attribute, mocked_detail_attribute, expected_
     flat.update_details(mocked_detail_attribute)
     return_value = flat.within_range(user)
     assert return_value == expected_return
+
+
+@pytest.mark.parametrize("raw_currency, expected", [
+    ("825,13 EUR", 825.13),
+    ("825.13 EUR", 825.13),
+    ("1 200,50 €", 1200.50),
+    ("1.200,50 EUR", 1200.50),
+    ("1,200.50 €", 1200.50),
+    ("\xa02.050,44\xa0EUR\xa0", 2050.44),
+    ("2050,44", 2050.44),
+    ("1234", 1234.0),
+    ("", None),
+    (None, None),
+    ("invalid", None),
+])
+def test_parse_currency(raw_currency, expected):
+    assert Flat._parse_currency(raw_currency) == expected
+
+
+def test_update_details_availability():
+    flat = Flat(attributes=mock_attributes[0])
+    assert flat.available is True
+    flat.update_details({"available": False, "base_rent": "500 EUR"})
+    assert flat.available is False
+    assert flat.base_rent == 500.0

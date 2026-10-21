@@ -8,6 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (
     TimeoutException, ElementClickInterceptedException, ElementNotInteractableException,
 )
+from .scraper import ListingUnavailableError
 
 logger_app = logging.getLogger("app")
 logger_flats = logging.getLogger("flats")
@@ -42,7 +43,11 @@ class ApplicationManager:
                 "After checking, remove this flat's entry from logs/state.json on the log branch."
             )
 
-        self._fill_form_and_submit(flat)
+        try:
+            self._fill_form_and_submit(flat)
+        except ListingUnavailableError:
+            logger_app.info(f"Flat '{flat.title}' is no longer available; skipping: {flat.detail_link}")
+            return False
         self._log_application(flat)
         if self.state:
             self.state.clear_pending(flat)
@@ -84,8 +89,32 @@ class ApplicationManager:
         condition = EC.element_to_be_clickable if clickable else EC.visibility_of_element_located
         return self.wait.until(condition(locator), message=f"Application failed while {stage}")
 
+    def _is_unavailable(self):
+        try:
+            current_url = getattr(self.driver, "current_url", "") or ""
+            if any(term in current_url.lower() for term in ("nicht-mehr-verfuegbar", "not-available")):
+                return True
+            title = (getattr(self.driver, "title", "") or "").lower()
+            if any(term in title for term in ("nicht mehr verfügbar", "not available")) or title.startswith("404"):
+                return True
+            headers = self.driver.find_elements(
+                By.CSS_SELECTOR, "h1, h2, .m-text__header, .openimmo-no-offer-avilable__header"
+            )
+            for h in headers:
+                try:
+                    h_text = h.text.lower()
+                    if "nicht mehr verfügbar" in h_text or "not available" in h_text:
+                        return True
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return False
+
     def _prepare_form(self):
         self._dismiss_cookie_banner()
+        if self._is_unavailable():
+            raise ListingUnavailableError("Flat is no longer available; contact form cannot be opened")
         # WBM now uses a button; older pages used an anchor with extra classes.
         contact = self._wait_for(
             (By.CSS_SELECTOR, '.openimmo-detail__contact-box-button'),
@@ -118,6 +147,8 @@ class ApplicationManager:
             try:
                 submit_btn = self._prepare_form()
                 break
+            except ListingUnavailableError:
+                raise
             except (TimeoutException, ElementClickInterceptedException, ElementNotInteractableException):
                 if attempt:
                     raise
