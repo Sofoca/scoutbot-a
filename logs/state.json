@@ -1,5 +1,5 @@
 {
-  "query_failures": 0,
+  "query_failures": 1,
   "incidents": {
     "b491cc0a6f150468bda18bc69ebad00c83624387c2af02d7561a097d3dfc8153": "1f968b305d2f422f7d042d914bc1ee710753e58cf42ee9a392027780e0544ffe",
     "1a91412dbf3f999a997406e5f313ccead600d946beda136ad0edb4f140bf8c45": "36a955eb65d6aeb4ede8dcb5a9b06f81e2e586206620fe0b75c8eb480d8481ba"
