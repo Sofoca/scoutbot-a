@@ -112,6 +112,10 @@ def main(state):
                 if not flat.available:
                     logger.info("Flat '%s' is no longer available; skipping: %s", flat.title, flat.detail_link)
                     continue
+                if not flat.matches_criteria(user):
+                    logger.info("Flat '%s' does not meet search criteria after detail check (WBS required: %s); skipping",
+                                flat.title, flat.wbs)
+                    continue
                 if flat.base_rent is None:
                     raise ApplicationError("WBM base rent could not be read; eligibility could not be checked")
                 if not flat.within_range(user):

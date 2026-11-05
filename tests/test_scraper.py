@@ -173,3 +173,23 @@ def test_extract_detail_attributes_identifies_kaltmiete(flat_scraper, mocker):
     details = flat_scraper._extract_detail_attributes()
     assert details["base_rent"] == "850,00 EUR"
 
+
+
+@pytest.mark.parametrize("item_texts, expected", [
+    (["Anzahl der Zimmer: 3", "\n  WBS erforderlich:  Ja\n"], True),
+    (["Anzahl der Zimmer: 3", "WBS erforderlich: Nein"], False),
+    (["Anzahl der Zimmer: 3"], None),
+])
+def test_extract_wbs_required(flat_scraper, mocker, item_texts, expected):
+    items = [mocker.Mock(**{"get_attribute.return_value": t}) for t in item_texts]
+    flat_scraper.driver.find_elements.return_value = items
+    flat_scraper.driver.page_source = "<html></html>"
+    assert flat_scraper._extract_wbs_required() is expected
+
+
+def test_extract_wbs_required_from_page_source(flat_scraper):
+    flat_scraper.driver.find_elements.return_value = []
+    flat_scraper.driver.page_source = (
+        '<li class="openimmo-detail__object-list-item">\n\t\t<span>WBS erforderlich:</span> Ja\n</li>'
+    )
+    assert flat_scraper._extract_wbs_required() is True

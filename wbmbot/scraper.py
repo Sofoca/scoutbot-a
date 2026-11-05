@@ -204,7 +204,27 @@ class FlatScraper:
 
         return {
             "base_rent": base_rent,
+            "wbs_required": self._extract_wbs_required(),
         }
+
+    _WBS_REQUIRED_RE = re.compile(r"wbs\s+erforderlich\s*:?\s*(?:</span>)?\s*(ja|nein)\b", re.IGNORECASE)
+
+    def _extract_wbs_required(self):
+        # Detail page "Objektdetails" list: <li><span>WBS erforderlich:</span> Ja|Nein</li>
+        try:
+            for item in self.driver.find_elements(By.CSS_SELECTOR, ".openimmo-detail__object-list-item"):
+                text = item.get_attribute("textContent")
+                match = self._WBS_REQUIRED_RE.search(text) if isinstance(text, str) else None
+                if match:
+                    return match.group(1).lower() == "ja"
+            page_source = getattr(self.driver, "page_source", "")
+            match = self._WBS_REQUIRED_RE.search(page_source) if isinstance(page_source, str) else None
+            if match:
+                return match.group(1).lower() == "ja"
+        except Exception as e:
+            logger.warning(f"Error reading WBS requirement: {e}")
+        logger.warning("WBS requirement not found on detail page; relying on listing title/features")
+        return None
 
     @staticmethod
     def _find_element_text_safe(elem, by, value, fallback=""):

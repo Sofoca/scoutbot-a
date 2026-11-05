@@ -11,7 +11,9 @@ class Flat:
         self.rooms = self._parse_sqm(attributes.get("rooms", 0.0))
         self.zip_code = self._extract_zipcode(attributes.get("zip_code", ""))
         self.property_attrs = [attr.lower() for attr in attributes.get("property_attrs", [])]
-        self.wbs = any("wbs" in attr for attr in self.property_attrs)
+        # WBM sometimes puts WBS only in the title (e.g. "mit WBS 140"), not the feature list.
+        self._card_wbs = any(self._mentions_wbs(attr) for attr in self.property_attrs)
+        self.wbs = self._card_wbs or self._mentions_wbs(self.title)
         self.available = attributes.get("available", True)
         # Compute hash for deduplication
         self.hash = self._compute_hash()
@@ -54,11 +56,19 @@ class Flat:
             self.base_rent = self._parse_currency(detail_attrs.get("base_rent", ""))
         if "detail_url" in detail_attrs:
             self.detail_link = detail_attrs.get("detail_url", "")
+        # Detail page "WBS erforderlich: Ja/Nein" is authoritative; never downgrade a WBS signal.
+        if detail_attrs.get("wbs_required") is not None:
+            self.wbs = self.wbs or bool(detail_attrs["wbs_required"])
         # can be extended to retrieve more attributes from details page
 
     def _compute_hash(self):
-        hash_input = f"{self.title}{self.total_rent}{self.size}{self.rooms}{self.zip_code}{self.wbs}"
+        # Uses the card feature-list signal only, so hashes of already-applied flats stay stable.
+        hash_input = f"{self.title}{self.total_rent}{self.size}{self.rooms}{self.zip_code}{self._card_wbs}"
         return hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+
+    @staticmethod
+    def _mentions_wbs(text):
+        return bool(re.search(r"(?i)\bwbs\b|wohnberechtigungsschein", text or ""))
 
     @staticmethod
     def _parse_currency(value):

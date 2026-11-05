@@ -120,3 +120,52 @@ def test_update_details_availability():
     flat.update_details({"available": False, "base_rent": "500 EUR"})
     assert flat.available is False
     assert flat.base_rent == 500.0
+
+
+WBS_TITLE_FLAT = {
+    "title": "4-Zimmer-Wohnung in Mitte mit WBS 160-220",
+    "total_rent": "1.012,34 €", "size": "100,90 m²", "rooms": "4", "zip_code": "10117",
+    "property_attrs": ["Bad mit Wanne", "Aufzug", "barrierearm", "Balkon", "Abstellraum"],
+}
+
+
+@pytest.mark.parametrize("title, attrs, expected", [
+    ("2-Zimmer-Wohnung", ["Balkon", "WBS"], True),
+    ("3-Zimmer-Wohnung mit WBS 140", ["Balkon"], True),
+    ("WBS 160/180/220: Erstbezug 3-Zimmer-Wohnung", [], True),
+    ("Wohnung nur mit Wohnberechtigungsschein", [], True),
+    ("2-Zimmer-Wohnung in Friedrichshain", ["Balkon"], False),
+])
+def test_wbs_detected_from_title_or_features(title, attrs, expected):
+    flat = Flat({"title": title, "property_attrs": attrs})
+    assert flat.wbs is expected
+
+
+def test_wbs_in_title_excluded_for_non_wbs_user(user):
+    assert Flat(WBS_TITLE_FLAT).matches_criteria(user) is False
+
+
+def test_wbs_from_detail_page_excludes_flat(user):
+    flat = Flat(mock_attributes[2])
+    assert flat.matches_criteria(user) is True
+    flat.update_details({"wbs_required": True})
+    assert flat.wbs is True
+    assert flat.matches_criteria(user) is False
+
+
+def test_detail_page_never_downgrades_wbs():
+    flat = Flat(WBS_TITLE_FLAT)
+    flat.update_details({"wbs_required": False})
+    assert flat.wbs is True
+    flat.update_details({"wbs_required": None})
+    assert flat.wbs is True
+
+
+def test_hash_unchanged_by_title_wbs_detection():
+    # Hash must match the pre-fix definition so already-applied flats stay deduplicated.
+    import hashlib
+    flat = Flat(WBS_TITLE_FLAT)
+    expected = hashlib.sha256(
+        f"{flat.title}{flat.total_rent}{flat.size}{flat.rooms}{flat.zip_code}False".encode()
+    ).hexdigest()
+    assert flat.hash == expected
