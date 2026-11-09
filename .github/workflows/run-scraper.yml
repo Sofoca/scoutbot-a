@@ -14,17 +14,35 @@ concurrency:
 
 jobs:
   run-scraper:
-    runs-on: ubuntu-latest
+    # Pinned image: ubuntu-latest moves to Ubuntu 26 and would silently change the
+    # preinstalled Chrome/chromedriver and system Python 3.12 used as fallbacks below.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+    # Steps without an id stay out of the steps context, so a transient failure in a
+    # download that has a fallback never counts as a failed stage or sends an alert.
     steps:
-      - uses: actions/checkout@v4
-        id: checkout
+      - name: Check out repository
         continue-on-error: true
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Wait before retrying checkout
+        if: ${{ hashFiles('main.py') == '' }}
+        run: sleep 30
+
+      - name: Retry checkout
+        if: ${{ hashFiles('main.py') == '' }}
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify checkout
+        id: checkout
+        continue-on-error: true
+        run: test -f main.py && git rev-parse --verify HEAD
 
       - name: Fetch this repository's application history and incident state
         id: history
@@ -45,12 +63,13 @@ jobs:
             git show origin/log:logs/state.json > logs/state.json
           fi
 
-      # No id on purpose: a transient GitHub Releases outage (e.g. HTTP 504) here must
-      # not count as a failed stage. The "uv" step below verifies uv or installs it from PyPI.
-      - name: Install uv from GitHub Releases
+      # No id: a transient download outage (e.g. HTTP 504) must not count as a failed
+      # stage. The "uv" step below verifies uv or installs it from PyPI.
+      # setup-uv publishes no major tags since v8, so the exact version is pinned.
+      - name: Install uv
         if: ${{ !contains(steps.*.outcome, 'failure') }}
         continue-on-error: true
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.3.3
 
       - name: Ensure uv is available (PyPI fallback)
         id: uv
@@ -92,13 +111,33 @@ jobs:
           done
           exit 1
 
-      - name: Set up Chrome
-        id: chrome
+      # No id: if the Chrome download fails, the "chrome" step falls back to the
+      # runner image's preinstalled Chrome and matching chromedriver.
+      - name: Download Chrome
         if: ${{ !contains(steps.*.outcome, 'failure') }}
         continue-on-error: true
         uses: browser-actions/setup-chrome@v2
         with:
           install-chromedriver: true
+
+      - name: Select a matching Chrome and chromedriver
+        id: chrome
+        if: ${{ !contains(steps.*.outcome, 'failure') }}
+        continue-on-error: true
+        run: |
+          major() { [[ "$("$1" --version 2>/dev/null)" =~ ([0-9]+)\. ]] && echo "${BASH_REMATCH[1]}"; }
+          pick() {
+            [ -x "$1" ] && [ -x "$2" ] || return 1
+            local chrome_major driver_major
+            chrome_major="$(major "$1")" && driver_major="$(major "$2")" || return 1
+            [ "$chrome_major" = "$driver_major" ] || { echo "Version mismatch: $1 ($chrome_major) vs $2 ($driver_major)"; return 1; }
+            echo "chrome-path=$1" >> "$GITHUB_OUTPUT"
+            echo "chromedriver-path=$2" >> "$GITHUB_OUTPUT"
+            echo "Using $1 with $2 (major $chrome_major)"
+          }
+          if pick "$(command -v chrome || true)" "$(command -v chromedriver || true)"; then exit 0; fi
+          echo "::warning::Downloaded Chrome unavailable; using the runner's preinstalled Chrome."
+          pick "$(command -v google-chrome || true)" "${CHROMEWEBDRIVER:-/usr/local/share/chromedriver-linux64}/chromedriver"
 
       - name: Run scraper
         id: scraper
@@ -141,7 +180,7 @@ jobs:
 
       - name: Upload logs
         if: ${{ always() && (contains(steps.*.outcome, 'failure') || hashFiles('logs/attention') != '') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: scraper-logs
