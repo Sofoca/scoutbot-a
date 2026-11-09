@@ -93,12 +93,13 @@ jobs:
         if: ${{ !contains(steps.*.outcome, 'failure') }}
         continue-on-error: true
         run: |
+          # ubuntu-24.04 ships Python 3.12; download a managed one only if it's missing.
+          if uv python find --system 3.12; then exit 0; fi
           for i in 1 2 3; do
             if uv python install 3.12; then exit 0; fi
             sleep $((10 * i))
           done
-          # Managed Python download unavailable: fall back to a runner-provided 3.12.
-          uv python find 3.12
+          exit 1
 
       - name: Install dependencies
         id: dependencies
@@ -111,10 +112,25 @@ jobs:
           done
           exit 1
 
-      # No id: if the Chrome download fails, the "chrome" step falls back to the
-      # runner image's preinstalled Chrome and matching chromedriver.
-      - name: Download Chrome
+      # The runner image ships Chrome with a matching chromedriver, so the ~6 s Chrome
+      # download only runs when that pair is missing or mismatched. No ids: a failed
+      # download must not count as a stage; the "chrome" step verifies the final pair.
+      - name: Check preinstalled Chrome
         if: ${{ !contains(steps.*.outcome, 'failure') }}
+        continue-on-error: true
+        run: |
+          major() { [[ "$("$1" --version 2>/dev/null)" =~ ([0-9]+)\. ]] && echo "${BASH_REMATCH[1]}"; }
+          chrome="$(command -v google-chrome || true)"
+          driver="${CHROMEWEBDRIVER:-/usr/local/share/chromedriver-linux64}/chromedriver"
+          if [ -x "$chrome" ] && [ -x "$driver" ] && [ -n "$(major "$chrome")" ] && [ "$(major "$chrome")" = "$(major "$driver")" ]; then
+            echo "PREINSTALLED_CHROME=$chrome" >> "$GITHUB_ENV"
+            echo "PREINSTALLED_CHROMEDRIVER=$driver" >> "$GITHUB_ENV"
+          else
+            echo "Preinstalled Chrome/chromedriver missing or mismatched; downloading instead."
+          fi
+
+      - name: Download Chrome
+        if: ${{ !contains(steps.*.outcome, 'failure') && env.PREINSTALLED_CHROME == '' }}
         continue-on-error: true
         uses: browser-actions/setup-chrome@v2
         with:
@@ -135,9 +151,8 @@ jobs:
             echo "chromedriver-path=$2" >> "$GITHUB_OUTPUT"
             echo "Using $1 with $2 (major $chrome_major)"
           }
-          if pick "$(command -v chrome || true)" "$(command -v chromedriver || true)"; then exit 0; fi
-          echo "::warning::Downloaded Chrome unavailable; using the runner's preinstalled Chrome."
-          pick "$(command -v google-chrome || true)" "${CHROMEWEBDRIVER:-/usr/local/share/chromedriver-linux64}/chromedriver"
+          if pick "${PREINSTALLED_CHROME:-}" "${PREINSTALLED_CHROMEDRIVER:-}"; then exit 0; fi
+          pick "$(command -v chrome || true)" "$(command -v chromedriver || true)"
 
       - name: Run scraper
         id: scraper
@@ -151,7 +166,7 @@ jobs:
         run: |
           echo "$(dirname "${{ steps.chrome.outputs.chromedriver-path }}")" >> "$GITHUB_PATH"
           export PATH="$(dirname "${{ steps.chrome.outputs.chromedriver-path }}"):$PATH"
-          uv run --python 3.12 main.py
+          uv run --no-sync --python 3.12 main.py
 
       - name: Preserve history and incident state even after a scraper failure
         id: persist

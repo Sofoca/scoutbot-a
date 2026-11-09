@@ -80,34 +80,53 @@ def _fake_binary(directory, name, version):
     return path
 
 
-@pytest.mark.parametrize('downloaded,expected', [
-    ({'chrome': '142.0.1', 'chromedriver': '142.0.1'}, 'downloaded'),
-    ({'chrome': '142.0.1', 'chromedriver': '141.0.9'}, 'preinstalled'),
-    ({}, 'preinstalled'),
-])
-def test_chrome_selection_falls_back_to_matching_preinstalled_pair(tmp_path, downloaded, expected):
+def _step_script(name):
+    return next(s for s in run_scraper_steps() if s.get('name') == name)['run']
+
+
+def _run_chrome_steps(tmp_path, preinstalled, downloaded):
+    """Run the probe and select steps the way Actions would, with fake binaries."""
     import subprocess
-    script = run_scraper_steps()[[s.get('id') for s in run_scraper_steps()].index('chrome')]['run']
-    bin_dir, driver_dir = tmp_path / 'downloaded', tmp_path / 'preinstalled'
-    bin_dir.mkdir(); driver_dir.mkdir()
-    for name, version in downloaded.items():
-        _fake_binary(bin_dir, name, version)
-    _fake_binary(bin_dir, 'google-chrome', '140.0.5')
-    _fake_binary(driver_dir, 'chromedriver', '140.0.5')
-    output = tmp_path / 'output'
-    result = subprocess.run(['/bin/bash', '-e', '-c', script], capture_output=True, text=True, env={
-        'PATH': str(bin_dir), 'GITHUB_OUTPUT': str(output), 'CHROMEWEBDRIVER': str(driver_dir)})
-    assert result.returncode == 0, result.stdout + result.stderr
+    system, driver_dir, download = tmp_path / 'system', tmp_path / 'chromedriver-linux64', tmp_path / 'download'
+    for d in (system, driver_dir, download):
+        d.mkdir()
+    if preinstalled:
+        _fake_binary(system, 'google-chrome', preinstalled[0])
+        _fake_binary(driver_dir, 'chromedriver', preinstalled[1])
+    env_file, output = tmp_path / 'env', tmp_path / 'output'
+    env_file.touch(); output.touch()
+    base = {'PATH': f'{system}:{download}', 'CHROMEWEBDRIVER': str(driver_dir),
+            'GITHUB_ENV': str(env_file), 'GITHUB_OUTPUT': str(output)}
+    probe = subprocess.run(['/bin/bash', '-e', '-c', _step_script('Check preinstalled Chrome')],
+                           capture_output=True, text=True, env=base)
+    assert probe.returncode == 0, probe.stdout + probe.stderr
+    exported = dict(line.split('=', 1) for line in env_file.read_text().splitlines())
+    download_ran = not exported.get('PREINSTALLED_CHROME')
+    if download_ran and downloaded:
+        _fake_binary(download, 'chrome', downloaded[0])
+        _fake_binary(download, 'chromedriver', downloaded[1])
+    select = subprocess.run(['/bin/bash', '-e', '-c', _step_script('Select a matching Chrome and chromedriver')],
+                            capture_output=True, text=True, env={**base, **exported})
     chosen = dict(line.split('=', 1) for line in output.read_text().splitlines())
-    if expected == 'downloaded':
-        assert chosen == {'chrome-path': str(bin_dir / 'chrome'), 'chromedriver-path': str(bin_dir / 'chromedriver')}
-    else:
-        assert chosen == {'chrome-path': str(bin_dir / 'google-chrome'), 'chromedriver-path': str(driver_dir / 'chromedriver')}
+    return download_ran, select.returncode, chosen, (system, driver_dir, download)
 
 
-def test_chrome_selection_fails_without_any_usable_chrome(tmp_path):
-    import subprocess
-    script = run_scraper_steps()[[s.get('id') for s in run_scraper_steps()].index('chrome')]['run']
-    result = subprocess.run(['/bin/bash', '-e', '-c', script], capture_output=True, text=True, env={
-        'PATH': str(tmp_path), 'GITHUB_OUTPUT': str(tmp_path / 'output'), 'CHROMEWEBDRIVER': str(tmp_path)})
-    assert result.returncode != 0
+def test_matching_preinstalled_chrome_skips_the_download(tmp_path):
+    download_ran, code, chosen, (system, driver_dir, _) = _run_chrome_steps(
+        tmp_path, preinstalled=('140.0.5', '140.0.5'), downloaded=('142.0.1', '142.0.1'))
+    assert not download_ran and code == 0
+    assert chosen == {'chrome-path': str(system / 'google-chrome'), 'chromedriver-path': str(driver_dir / 'chromedriver')}
+
+
+@pytest.mark.parametrize('preinstalled', [('140.0.5', '139.0.1'), None])
+def test_unusable_preinstalled_chrome_falls_back_to_the_download(tmp_path, preinstalled):
+    download_ran, code, chosen, (_, _, download) = _run_chrome_steps(
+        tmp_path, preinstalled=preinstalled, downloaded=('142.0.1', '142.0.1'))
+    assert download_ran and code == 0
+    assert chosen == {'chrome-path': str(download / 'chrome'), 'chromedriver-path': str(download / 'chromedriver')}
+
+
+@pytest.mark.parametrize('downloaded', [None, ('142.0.1', '141.0.9')])
+def test_chrome_selection_fails_without_a_matching_pair(tmp_path, downloaded):
+    download_ran, code, chosen, _ = _run_chrome_steps(tmp_path, preinstalled=None, downloaded=downloaded)
+    assert download_ran and code != 0 and chosen == {}
