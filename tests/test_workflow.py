@@ -40,3 +40,18 @@ def test_email_only_when_an_actionable_failure_cannot_reach_telegram(monkeypatch
         request.assert_not_called()
     elif 'persist' in failures:
         assert b'Application history could not be saved' in request.call_args.args[0].data
+
+
+def test_uv_download_outage_falls_back_instead_of_failing_a_stage():
+    """A GitHub Releases 504 in setup-uv must not surface as a failed 'uv' stage."""
+    workflow = yaml.safe_load(Path('.github/workflows/run-scraper.yml').read_text())
+    steps = workflow['jobs']['run-scraper']['steps']
+    setup_uv = next(s for s in steps if str(s.get('uses', '')).startswith('astral-sh/setup-uv'))
+    assert 'id' not in setup_uv, 'setup-uv outcome must stay out of the steps context'
+    assert setup_uv['continue-on-error'] is True
+    ids = [s.get('id') for s in steps]
+    assert ids.index('uv') == steps.index(setup_uv) + 1
+    fallback = steps[ids.index('uv')]['run']
+    assert 'command -v uv' in fallback and 'pip' in fallback
+    for stage in ('python', 'dependencies'):
+        assert 'for i in' in steps[ids.index(stage)]['run'], f'{stage} must retry transient download errors'

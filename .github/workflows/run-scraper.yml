@@ -45,23 +45,52 @@ jobs:
             git show origin/log:logs/state.json > logs/state.json
           fi
 
-      - name: Install uv
-        id: uv
+      # No id on purpose: a transient GitHub Releases outage (e.g. HTTP 504) here must
+      # not count as a failed stage. The "uv" step below verifies uv or installs it from PyPI.
+      - name: Install uv from GitHub Releases
         if: ${{ !contains(steps.*.outcome, 'failure') }}
         continue-on-error: true
         uses: astral-sh/setup-uv@v6
+
+      - name: Ensure uv is available (PyPI fallback)
+        id: uv
+        if: ${{ !contains(steps.*.outcome, 'failure') }}
+        continue-on-error: true
+        run: |
+          if command -v uv >/dev/null 2>&1; then uv --version; exit 0; fi
+          echo "::warning::setup-uv could not download uv; installing it from PyPI instead."
+          for i in 1 2 3; do
+            if pipx install --force uv || python3 -m pip install --user --break-system-packages uv; then
+              echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+              "$HOME/.local/bin/uv" --version
+              exit 0
+            fi
+            sleep $((10 * i))
+          done
+          exit 1
 
       - name: Set up Python
         id: python
         if: ${{ !contains(steps.*.outcome, 'failure') }}
         continue-on-error: true
-        run: uv python install 3.12
+        run: |
+          for i in 1 2 3; do
+            if uv python install 3.12; then exit 0; fi
+            sleep $((10 * i))
+          done
+          # Managed Python download unavailable: fall back to a runner-provided 3.12.
+          uv python find 3.12
 
       - name: Install dependencies
         id: dependencies
         if: ${{ !contains(steps.*.outcome, 'failure') }}
         continue-on-error: true
-        run: uv sync --python 3.12 --locked --all-extras --dev
+        run: |
+          for i in 1 2 3; do
+            if uv sync --python 3.12 --locked --all-extras --dev; then exit 0; fi
+            sleep $((10 * i))
+          done
+          exit 1
 
       - name: Set up Chrome
         id: chrome
